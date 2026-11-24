@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Dispatch Agent Usage</title>
+<style>
+/* Layout: one column of sections; tiles row, then charts and tables. Ink-on-paper neutrals with a steel-blue accent. */
+:root{
+  --bg:#f6f7f8; --panel:#ffffff; --fg:#1b2129; --muted:#5d6672; --line:#dfe3e8;
+  --accent:#2f6fb0; --ok:#1f8a4c; --bad:#c2410c; --grid:#e9ecef;
+  --s1:#2f6fb0; --s2:#d08a2e; --s3:#3f9b8f; --s4:#8e6bbf; --s5:#c25b7a; --s6:#6b7f2e;
+  --display:"Space Grotesk",Inter,system-ui,sans-serif; --body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#12161b; --panel:#1a2027; --fg:#e7ebef; --muted:#9aa4af; --line:#2c343d;
+  --accent:#6aa5e0; --ok:#4cc27e; --bad:#f08a5d; --grid:#242b33;
+  --s1:#6aa5e0; --s2:#e3a75a; --s3:#5cc0b2; --s4:#ad8ee0; --s5:#e2809c; --s6:#a8bf5a; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 var(--body)}
+.wrap{max-width:1100px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:32px}
+h1{font-family:var(--display);font-weight:600;font-size:1.9rem;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:1.05rem;font-weight:600;margin:0 0 4px}
+.lede{color:var(--muted);margin:6px 0 0;max-width:70ch}
+.stamp{font-size:12px;color:var(--muted);margin-top:4px}
+.note{color:var(--muted);font-size:12.5px;margin:0 0 10px;max-width:70ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .lbl{font-size:12px;color:var(--muted);letter-spacing:.02em}
+.tile .big{font-family:var(--display);font-size:2.1rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.up{color:var(--ok)}.down{color:var(--bad)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--body)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.12);border-radius:8px;padding:8px 10px;font-size:12px;white-space:nowrap;z-index:2}
+.tip b{display:block;margin-bottom:2px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.two>*{min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+td.num,th.num{text-align:right}
+td.nw{white-space:nowrap}
+td.txt{min-width:22ch;max-width:48ch}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);white-space:nowrap}
+.pill.new,.st.new{border-color:var(--bad);color:var(--bad)}
+.pill.in-progress,.st.in-progress{border-color:var(--accent);color:var(--accent)}
+.pill.fixed,.st.fixed{border-color:var(--ok);color:var(--ok)}
+.pill.won-t-fix,.st.won-t-fix{color:var(--muted)}
+select.st{font:inherit;font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 8px;cursor:pointer}
+select.st:disabled{opacity:.5;cursor:wait}
+select.st:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fb-msg{font-size:12px;color:var(--bad);min-height:1.2em;margin-top:6px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--panel)}
+.seg button{font:inherit;font-size:12.5px;border:0;background:transparent;color:var(--muted);padding:5px 12px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mark line{stroke:var(--muted);stroke-dasharray:3 3}
+.chart text.mk{fill:var(--muted);font-size:10px}
+.counts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.empty{color:var(--muted);padding:12px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <h1>Dispatch Agent Usage</h1>
+      <div class="seg" role="group" aria-label="Time window">
+        <button type="button" id="win-7" data-win="7">7 days</button>
+        <button type="button" id="win-30" data-win="30">30 days</button>
+        <button type="button" id="win-all" data-win="all">Since Nov 5</button>
+      </div>
+    </div>
+    <p class="lede" id="takeaway">Loading…</p>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <section class="tiles" aria-label="Selected window">
+    <div class="tile"><span class="lbl" data-wl="Lookups">Lookups</span><span class="big" id="k-lookups">—</span><span class="sub" id="k-change">—</span></div>
+    <div class="tile"><span class="lbl" data-wl="Active reps">Active reps</span><span class="big" id="k-reps">—</span><span class="sub">Reps who ran a lookup</span></div>
+    <div class="tile"><span class="lbl" data-wl="Found rate">Found rate</span><span class="big" id="k-found">—</span><span class="sub" id="k-found-sub">Lookups that returned data</span></div>
+    <div class="tile"><span class="lbl">Open feedback</span><span class="big" id="k-open">—</span><span class="sub" id="k-open-sub">New or in progress</span></div>
+  </section>
+
+  <section class="card" id="quality">
+    <h2>Found rate over time</h2>
+    <p class="note">Share of lookups that returned data. Dots are single days (bigger = more lookups); the line is the rolling 7-day rate. Dashed lines mark agent updates, so you can see what each change did.</p>
+    <div class="chart" id="found-chart"></div>
+  </section>
+
+  <section class="card" id="usage">
+    <h2>Lookups per day, by type</h2>
+    <p class="note">Each bar is one day, Pacific time. A lookup is one call the agent makes for availability, pricing, a site plan, a document, nearby locations or tours (one per tours request).</p>
+    <div class="chart" id="daily"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <div class="two">
+    <section class="card" id="by-rep">
+      <h2>By rep</h2>
+      <p class="note">Counts start Nov 5, when rep logging began. Justin's own testing is left out of every number on this page.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Rep</th><th class="num" id="rep-col">In window</th><th class="num">Found rate</th><th>Last active</th></tr></thead>
+        <tbody id="reps"></tbody></table></div>
+    </section>
+    <section class="card" id="locations">
+      <h2>Most looked-up locations</h2>
+      <p class="note">Availability, pricing and site plan lookups in the selected window, with how reps usually ask for each.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Code</th><th>Usually asked as</th><th class="num">Lookups</th></tr></thead>
+        <tbody id="locs"></tbody></table></div>
+    </section>
+  </div>
+
+  <section class="card" id="feedback">
+    <h2>Feedback reports</h2>
+    <p class="note">From the Agent Issues tab: what reps reported through "report issue", newest first. Change a status here and it's saved to the sheet; Fixed also records when.</p>
+    <div class="counts" id="fb-counts"></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Reported</th><th>By</th><th>Type</th><th>What was wrong</th><th>Status</th><th>Fixed at</th></tr></thead>
+      <tbody id="fb"></tbody></table></div>
+    <div class="fb-msg" id="fb-msg" role="status"></div>
+  </section>
+
+  <section class="card" id="failures">
+    <h2>Not found</h2>
+    <p class="note">Lookups in the selected window that returned nothing, newest first. Most are places with no Cubework location or wording the agent couldn't match.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>When</th><th>Type</th><th>Asked</th><th>Rep</th></tr></thead>
+      <tbody id="fails"></tbody></table></div>
+  </section>
+</div>
+
+<script>
+function start(DATA) {
+  var FLOWS = ['availability', 'pricing', 'site-plan', 'documents', 'nearby', 'tours'];
+  var LABEL = {availability: 'Availability', pricing: 'Pricing', 'site-plan': 'Site plan', documents: 'Documents', nearby: 'Nearby', tours: 'Tours'};
+  var COLOR = {availability: 'var(--s1)', pricing: 'var(--s2)', 'site-plan': 'var(--s3)', documents: 'var(--s4)', nearby: 'var(--s5)', tours: 'var(--s6)'};
+  // Agent updates that change lookups, shown as markers on the found-rate chart. Add one line per release (date = day it went live, Pacific).
+  var CHANGES = [
+    {date: '2026-11-06', label: 'Holds, floors, site plan link'},
+    {date: '2026-11-10', label: 'Documents'},
+    {date: '2026-11-12', label: 'Nearby, rule fixes'},
+    {date: '2026-11-16', label: 'Tours'},
+    {date: '2026-11-17', label: 'Drive times'}
+  ];
+  // Left out of every number: the builder's own testing.
+  var EXCLUDE = ['justin.cho@cubework.com'];
+  var START = '2026-11-05'; // rep logging began
+  var D = 864e5, now = Date.now(), TZ = 'America/Los_Angeles';
+  var dayFmt = new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'});
+  var whenFmt = new Intl.DateTimeFormat('en-US', {timeZone: TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
+  var nf = new Intl.NumberFormat('en-US');
+  var pct = function (v) { return Math.round(v * 100) + '%'; };
+  var el = function (id) { return document.getElementById(id); };
+  var repName = function (r) { return String(r).replace(/@cubework\.com$/, ''); };
+  var shortDate = function (k) { return new Date(k + 'T12:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'}); };
+  var addDays = function (k, n) { return new Date(new Date(k + 'T12:00:00Z').getTime() + n * D).toISOString().slice(0, 10); };
+  var today = dayFmt.format(new Date(now));
+  var NS = 'http://www.w3.org/2000/svg';
+  function td(tr, text, cls) { var c = document.createElement('td'); if (cls) c.className = cls; c.textContent = text; tr.appendChild(c); return c; }
+  function emptyRow(tb, cols, text) { var tr = document.createElement('tr'); var c = td(tr, text, 'empty'); c.colSpan = cols; tb.appendChild(tr); }
+  function mkSvg(box, W, H, label) {
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label);
+    box.appendChild(svg);
+    svg.mk = function (tag, attrs, parent) { var n = document.createElementNS(NS, tag); for (var a in attrs) n.setAttribute(a, attrs[a]); (parent || svg).appendChild(n); return n; };
+    return svg;
+  }
+
+  var log = (DATA.lookups || []).filter(function (r) {
+    var u = String(r.user || '').trim().toLowerCase();
+    return r.timestamp && r.flow && r.flow !== 'nearby-seed' && String(r.asked || '').trim().toLowerCase() !== 'test'
+      && u !== '' && EXCLUDE.indexOf(u) < 0;
+  }).map(function (r) {
+    var t = new Date(r.timestamp);
+    return {ms: t.getTime(), date: dayFmt.format(t), flow: r.flow, asked: String(r.asked || ''), code: String(r.code || ''),
+      found: String(r.found) === 'yes', rep: String(r.user).trim().toLowerCase()};
+  }).filter(function (r) { return !isNaN(r.ms) && r.date >= START; });
+
+  // Feedback state (independent of the window)
+  var STATUSES = ['New', 'In progress', 'Fixed', "Won't fix"];
+  var slug = function (s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-'); };
+  var stOf = function (r) { var v = String(r.Status || '').trim(); return v || 'New'; };
+  var isOpen = function (r) { var v = stOf(r).toLowerCase(); return v !== 'fixed' && v !== "won't fix"; };
+  var issues = (DATA.issues || []).filter(function (r) { return r['Reported at']; });
+  var openCount = function () { return issues.filter(isOpen).length; };
+  var baseTakeaway = '';
+  function renderOpen() {
+    var n = openCount();
+    el('k-open').textContent = nf.format(n);
+    el('takeaway').textContent = baseTakeaway + ' ' + nf.format(n) + ' feedback report' + (n === 1 ? '' : 's') + ' open.';
+  }
+  el('stamp').textContent = 'Data as of ' + whenFmt.format(new Date(DATA.at)) + ' Pacific. Reload the page for the latest.';
+
+  // Window
+  function windowOf(w) {
+    if (w === 'all') return {key: 'all', from: START, label: 'since Nov 5', name: 'Since Nov 5', prevFrom: null};
+    var n = Number(w), from = addDays(today, -(n - 1));
+    if (from < START) from = START;
+    return {key: w, n: n, from: from, label: 'last ' + n + ' days', name: 'Last ' + n + ' days',
+      prevFrom: addDays(today, -(2 * n - 1)), prevTo: addDays(today, -n)};
+  }
+
+  function render(w) {
+    var W0 = windowOf(w);
+    document.querySelectorAll('.seg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-win') === w)); });
+    document.querySelectorAll('[data-wl]').forEach(function (n) { n.textContent = n.getAttribute('data-wl') + ' · ' + W0.label; });
+    el('rep-col').textContent = W0.name;
+    var cur = log.filter(function (r) { return r.date >= W0.from; });
+    var prev = W0.prevFrom && W0.prevTo >= START ? log.filter(function (r) { return r.date >= W0.prevFrom && r.date <= W0.prevTo; }) : null;
+    var found = cur.filter(function (r) { return r.found; }).length;
+    var reps = {}; cur.forEach(function (r) { reps[r.rep] = (reps[r.rep] || 0) + 1; });
+    var nReps = Object.keys(reps).length;
+    el('k-lookups').textContent = nf.format(cur.length);
+    el('k-reps').textContent = nf.format(nReps);
+    el('k-found').textContent = cur.length ? pct(found / cur.length) : '—';
+    var prevPartial = W0.prevFrom && W0.prevFrom < START;
+    if (!prev) { el('k-change').textContent = W0.key === 'all' ? 'Since rep logging began' : 'No data before Nov 5 to compare'; el('k-found-sub').textContent = 'Lookups that returned data'; }
+    else {
+      el('k-change').textContent = nf.format(prev.length) + ' the ' + W0.n + ' days before' + (prevPartial ? ' (partly before logging began)' : '');
+      var pf = prev.filter(function (r) { return r.found; }).length;
+      el('k-found-sub').textContent = prev.length >= 10 ? pct(pf / prev.length) + ' the ' + W0.n + ' days before' : 'Too few lookups before to compare';
+    }
+    var topRep = Object.keys(reps).sort(function (a, b) { return reps[b] - reps[a]; })[0];
+    var t = nf.format(cur.length) + ' lookups ' + (W0.key === 'all' ? W0.label : 'in the ' + W0.label) + (prev ? ' (' + nf.format(prev.length) + ' the ' + W0.n + ' days before)' : '') + ' from ' + nReps + ' rep' + (nReps === 1 ? '' : 's') + '.';
+    if (cur.length) t += ' ' + pct(found / cur.length) + ' returned data.';
+    if (topRep) t += ' Most active: ' + repName(topRep) + '.';
+    baseTakeaway = t; renderOpen();
+    var days = []; for (var k = W0.from; k <= today; k = addDays(k, 1)) days.push(k);
+    drawFound(days); drawDaily(days, cur); fillReps(cur); fillLocs(cur); fillFails(cur);
+  }
+
+  function drawFound(days) {
+    var box = el('found-chart'); box.innerHTML = '';
+    var by = {}; log.forEach(function (r) { var o = by[r.date] || (by[r.date] = {n: 0, f: 0}); o.n++; if (r.found) o.f++; });
+    var pts = days.map(function (k) {
+      var o = by[k] || {n: 0, f: 0}, rn = 0, rf = 0;
+      for (var i = 0; i < 7; i++) { var q = by[addDays(k, -i)]; if (q) { rn += q.n; rf += q.f; } }
+      return {date: k, n: o.n, rate: o.n ? o.f / o.n : null, roll: rn ? rf / rn : null, rn: rn};
+    });
+    if (!pts.some(function (p) { return p.n; })) { box.textContent = 'No lookups in this window.'; return; }
+    var W = Math.max(300, box.clientWidth), H = 220, B = 22, T = 18, left = 38, R = 8;
+    var y = function (v) { return H - B - v * (H - B - T); };
+    var svg = mkSvg(box, W, H, 'Found rate by day with rolling 7-day rate, ' + days[0] + ' to ' + days[days.length - 1]);
+    var step = (W - left - R) / Math.max(1, days.length - 1);
+    var x = function (i) { return days.length === 1 ? left + (W - left - R) / 2 : left + i * step; };
+    [0, .25, .5, .75, 1].forEach(function (v) {
+      svg.mk('line', {x1: left, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--grid)'});
+      var tx = svg.mk('text', {x: left - 6, y: y(v) + 4, 'text-anchor': 'end'}); tx.textContent = pct(v);
+    });
+    CHANGES.forEach(function (c) {
+      var i = days.indexOf(c.date); if (i < 0) return;
+      var g = svg.mk('g', {'class': 'mark'});
+      svg.mk('line', {x1: x(i), x2: x(i), y1: T - 6, y2: H - B}, g);
+      var tx = svg.mk('text', {x: x(i) + 4, y: T - 6, 'class': 'mk'}, g); tx.textContent = c.label;
+      if (x(i) + 4 + tx.getComputedTextLength() > W) { tx.setAttribute('x', x(i) - 4); tx.setAttribute('text-anchor', 'end'); }
+    });
+    var path = '', on = false;
+    pts.forEach(function (p, i) { if (p.roll == null) { on = false; return; } path += (on ? 'L' : 'M') + x(i) + ' ' + y(p.roll); on = true; });
+    if (path) svg.mk('path', {d: path, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2});
+    var maxN = Math.max.apply(null, pts.map(function (p) { return p.n; })) || 1;
+    pts.forEach(function (p, i) { if (p.rate == null) return; svg.mk('circle', {cx: x(i), cy: y(p.rate), r: 2.5 + 4 * Math.sqrt(p.n / maxN), fill: 'var(--accent)', 'fill-opacity': .35}); });
+    var every = Math.ceil(days.length / Math.max(2, Math.floor((W - left) / 64)));
+    days.forEach(function (k, i) { if (i % every) return; var tx = svg.mk('text', {x: x(i), y: H - 6, 'text-anchor': 'middle'}); tx.textContent = shortDate(k);
+      var hw = tx.getComputedTextLength() / 2; if (x(i) + hw > W) tx.setAttribute('x', W - hw); if (x(i) - hw < 0) tx.setAttribute('x', hw); });
+    var tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; box.appendChild(tip);
+    svg.addEventListener('pointermove', function (ev) {
+      var rect = svg.getBoundingClientRect(), sx = (ev.clientX - rect.left) * (W / rect.width);
+      var i = Math.round((sx - left) / step); if (days.length === 1) i = 0;
+      if (i < 0 || i >= pts.length) { tip.hidden = true; return; }
+      var p = pts[i]; tip.hidden = false; tip.innerHTML = '';
+      var b = document.createElement('b'); b.textContent = shortDate(p.date); tip.appendChild(b);
+      var a = document.createElement('div'); a.textContent = p.n ? pct(p.rate) + ' of ' + p.n + ' lookups' : 'No lookups'; tip.appendChild(a);
+      if (p.roll != null) { var c = document.createElement('div'); c.textContent = 'Rolling 7 days: ' + pct(p.roll) + ' of ' + p.rn; tip.appendChild(c); }
+      CHANGES.forEach(function (ch) { if (ch.date === p.date) { var m = document.createElement('div'); m.textContent = 'Update: ' + ch.label; tip.appendChild(m); } });
+      var px = ev.clientX - box.getBoundingClientRect().left + 12;
+      tip.style.left = Math.max(0, Math.min(px, box.clientWidth - tip.offsetWidth)) + 'px'; tip.style.top = '8px';
+    });
+    svg.addEventListener('pointerleave', function () { tip.hidden = true; });
+  }
+
+  function drawDaily(days, cur) {
+    var box = el('daily'); box.innerHTML = '';
+    if (!cur.length) { box.textContent = 'No lookups in this window.'; return; }
+    var by = {}; cur.forEach(function (r) { by[r.date] = by[r.date] || {}; by[r.date][r.flow] = (by[r.date][r.flow] || 0) + 1; });
+    var rows = days.map(function (k) { var o = by[k] || {}, row = {date: k, total: 0}; FLOWS.forEach(function (f) { row[f] = o[f] || 0; row.total += row[f]; }); return row; });
+    var W = Math.max(300, box.clientWidth), H = 240, B = 22, T = 8;
+    var max = Math.max.apply(null, rows.map(function (r) { return r.total; })) || 1;
+    var step = Math.pow(10, Math.floor(Math.log10(max))), nice = Math.ceil(max / step) * step;
+    if (nice / step < 3) step = step / 2;
+    var ticks = []; for (var v = 0; v <= nice + 1e-9; v += step) ticks.push(v);
+    var y = function (v) { return H - B - (v / nice) * (H - B - T); };
+    var svg = mkSvg(box, W, H, 'Lookups per day by type, ' + rows[0].date + ' to ' + rows[rows.length - 1].date);
+    var left = 0;
+    ticks.forEach(function (v) { var tx = svg.mk('text', {x: 0, y: y(v) + 4}); tx.textContent = nf.format(v); left = Math.max(left, tx.getComputedTextLength()); });
+    left += 8;
+    svg.querySelectorAll('text').forEach(function (n) { n.setAttribute('x', left - 6); n.setAttribute('text-anchor', 'end'); });
+    ticks.forEach(function (v) { svg.mk('line', {x1: left, x2: W, y1: y(v), y2: y(v), stroke: 'var(--grid)'}); });
+    var bw = (W - left) / rows.length, pad = Math.min(4, bw * 0.2);
+    rows.forEach(function (r, i) {
+      var x0 = left + i * bw + pad / 2, base = 0;
+      FLOWS.forEach(function (f) { if (!r[f]) return; svg.mk('rect', {x: x0, width: Math.max(1, bw - pad), y: y(base + r[f]), height: y(base) - y(base + r[f]), fill: COLOR[f]}); base += r[f]; });
+    });
+    var every = Math.ceil(rows.length / Math.max(2, Math.floor((W - left) / 64)));
+    rows.forEach(function (r, i) { if (i % every) return; var tx = svg.mk('text', {x: left + i * bw + bw / 2, y: H - 6, 'text-anchor': 'middle'}); tx.textContent = shortDate(r.date); });
+    var tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; box.appendChild(tip);
+    svg.addEventListener('pointermove', function (ev) {
+      var rect = svg.getBoundingClientRect(), sx = (ev.clientX - rect.left) * (W / rect.width);
+      var i = Math.floor((sx - left) / bw);
+      if (i < 0 || i >= rows.length) { tip.hidden = true; return; }
+      var r = rows[i]; tip.hidden = false; tip.innerHTML = '';
+      var b = document.createElement('b'); b.textContent = shortDate(r.date) + ' · ' + r.total; tip.appendChild(b);
+      FLOWS.forEach(function (f) { if (r[f]) { var dv = document.createElement('div'); dv.textContent = LABEL[f] + ': ' + r[f]; tip.appendChild(dv); } });
+      var px = ev.clientX - box.getBoundingClientRect().left + 12;
+      tip.style.left = Math.max(0, Math.min(px, box.clientWidth - tip.offsetWidth)) + 'px'; tip.style.top = '8px';
+    });
+    svg.addEventListener('pointerleave', function () { tip.hidden = true; });
+  }
+
+  function fillReps(cur) {
+    var m = {};
+    cur.forEach(function (r) { var o = m[r.rep] || (m[r.rep] = {rep: r.rep, n: 0, f: 0, last: 0}); o.n++; if (r.found) o.f++; if (r.ms > o.last) o.last = r.ms; });
+    var rows = Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return b.n - a.n; });
+    var tb = el('reps'); tb.innerHTML = '';
+    if (!rows.length) return emptyRow(tb, 4, 'No rep lookups in this window.');
+    rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+      td(tr, repName(r.rep)); td(tr, nf.format(r.n), 'num'); td(tr, pct(r.f / r.n), 'num'); td(tr, whenFmt.format(new Date(r.last)), 'nw');
+      tb.appendChild(tr);
+    });
+  }
+
+  function fillLocs(cur) {
+    var m = {};
+    cur.forEach(function (r) {
+      if (!r.found || !/^\d+$/.test(r.code) || ['availability', 'pricing', 'site-plan'].indexOf(r.flow) < 0) return;
+      var o = m[r.code] || (m[r.code] = {code: r.code, n: 0, w: {}});
+      o.n++; var w = r.asked.trim().toLowerCase(); if (w) o.w[w] = (o.w[w] || 0) + 1;
+    });
+    var rows = Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 10);
+    var tb = el('locs'); tb.innerHTML = '';
+    if (!rows.length) return emptyRow(tb, 3, 'No location lookups in this window.');
+    rows.forEach(function (r) {
+      var words = Object.keys(r.w).sort(function (a, b) { return r.w[b] - r.w[a]; });
+      var tr = document.createElement('tr'); td(tr, r.code); td(tr, words[0] || ''); td(tr, nf.format(r.n), 'num'); tb.appendChild(tr);
+    });
+  }
+
+  function fillFails(cur) {
+    var rows = cur.filter(function (r) { return !r.found; }).sort(function (a, b) { return b.ms - a.ms; });
+    var tb = el('fails'); tb.innerHTML = '';
+    if (!rows.length) return emptyRow(tb, 4, 'No failed lookups in this window.');
+    rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+      td(tr, whenFmt.format(new Date(r.ms)), 'nw');
+      var cell = td(tr, ''); var p = document.createElement('span'); p.className = 'pill'; p.textContent = LABEL[r.flow] || r.flow; cell.appendChild(p);
+      td(tr, r.asked, 'txt'); td(tr, repName(r.rep), 'nw');
+      tb.appendChild(tr);
+    });
+  }
+
+  var lg = el('legend');
+  FLOWS.forEach(function (f) { var s = document.createElement('span'), i = document.createElement('i'); i.style.background = COLOR[f]; s.appendChild(i); s.appendChild(document.createTextNode(LABEL[f])); lg.appendChild(s); });
+
+  var win = '30';
+  try { var saved = localStorage.getItem('du-window'); if (saved === '7' || saved === '30' || saved === 'all') win = saved; } catch (e) {}
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      win = b.getAttribute('data-win');
+      try { localStorage.setItem('du-window', win); } catch (e) {}
+      render(win);
+    });
+  });
+  render(win);
+  var lw = el('daily').clientWidth;
+  window.addEventListener('resize', function () { var w = el('daily').clientWidth; if (w !== lw) { lw = w; render(win); } });
+
+  // Feedback table with editable status
+  (function () {
+    var msg = el('fb-msg');
+    function renderCounts() {
+      var byStatus = {}, byType = {};
+      issues.forEach(function (r) {
+        var st = stOf(r), ty = String(r['Issue type'] || 'Other').trim();
+        byStatus[st] = (byStatus[st] || 0) + 1; byType[ty] = (byType[ty] || 0) + 1;
+      });
+      var c = el('fb-counts'); c.textContent = '';
+      STATUSES.filter(function (k) { return byStatus[k]; }).concat(Object.keys(byStatus).filter(function (k) { return STATUSES.indexOf(k) < 0; }))
+        .forEach(function (k) { var p = document.createElement('span'); p.className = 'pill ' + slug(k); p.textContent = k + ': ' + byStatus[k]; c.appendChild(p); });
+      Object.keys(byType).forEach(function (k) { var p = document.createElement('span'); p.className = 'pill'; p.textContent = k + ': ' + byType[k]; c.appendChild(p); });
+    }
+    function save(r, sel, fixedCell) {
+      var prev = stOf(r), next = sel.value;
+      sel.disabled = true; msg.textContent = '';
+      fetch(DATA.statusUrl, {method: 'POST', headers: {'Content-Type': 'application/json', apikey: DATA.pk},
+        body: JSON.stringify({k: DATA.k || '', id: r.row_number, status: next})})
+        .then(function (res) { return res.json().catch(function () { return {ok: false, error: 'Unexpected reply (' + res.status + ').'}; }); })
+        .then(function (out) {
+          if (!out || !out.ok) throw new Error(out && out.error ? out.error : 'Not saved.');
+          r.Status = out.status; r['Fixed at'] = out.fixedAt || '';
+          sel.className = 'st ' + slug(out.status); fixedCell.textContent = r['Fixed at'];
+          renderCounts(); renderOpen();
+        })
+        .catch(function (e) {
+          sel.value = prev; sel.className = 'st ' + slug(prev);
+          msg.textContent = 'Couldn\'t save "' + next + '" for the ' + r['Reported at'] + ' report: ' + e.message;
+        })
+        .then(function () { sel.disabled = false; });
+    }
+    renderCounts();
+    var key = function (r) { return String(r['Reported at']).replace(/ (\d):/, ' 0$1:'); };
+    var rows = issues.slice().sort(function (a, b) { return key(b).localeCompare(key(a)); });
+    var tb = el('fb');
+    if (!rows.length) return emptyRow(tb, 6, 'No feedback reports yet.');
+    rows.forEach(function (r, i) {
+      var tr = document.createElement('tr');
+      td(tr, r['Reported at'], 'nw');
+      td(tr, repName(String(r['Reported by'] || 'unknown').toLowerCase()), 'nw');
+      td(tr, r['Issue type'] || '', 'nw');
+      td(tr, r['What was wrong'] || '', 'txt');
+      var cell = td(tr, '', 'nw');
+      var sel = document.createElement('select'); sel.id = 'st-' + (r.row_number || i);
+      sel.setAttribute('aria-label', 'Status of the ' + r['Reported at'] + ' report');
+      var cur = stOf(r);
+      STATUSES.concat(STATUSES.indexOf(cur) < 0 ? [cur] : []).forEach(function (k) { sel.appendChild(new Option(k, k, false, k === cur)); });
+      sel.className = 'st ' + slug(cur);
+      if (!r.row_number || !DATA.statusUrl) sel.disabled = true;
+      cell.appendChild(sel);
+      var fixedCell = td(tr, r['Fixed at'] || '', 'nw');
+      sel.addEventListener('change', function () { save(r, sel, fixedCell); });
+      tb.appendChild(tr);
+    });
+  })();
+
+}
+(function () {
+  var FN = 'https://wrifhbakszvadgtqevvr.supabase.co/functions/v1/dashboard', PK = 'sb_publishable_ci4QPyijRLs4iO6RXD78zQ_4Yc7VDBM';
+  var k = new URLSearchParams(location.search).get('k') || '';
+  document.getElementById('stamp').textContent = 'Loading…';
+  fetch(FN + '?k=' + encodeURIComponent(k), {headers: {apikey: PK}})
+    .then(function (r) { if (!r.ok) throw new Error(r.status === 404 ? 'check the link key' : 'HTTP ' + r.status); return r.json(); })
+    .then(function (d) { d.k = k; d.pk = PK; d.statusUrl = FN; start(d); })
+    .catch(function (e) { document.getElementById('stamp').textContent = 'Couldn\'t load the dashboard data (' + e.message + ').'; });
+})();
+</script>
+</body>
+</html>
