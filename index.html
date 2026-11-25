@@ -50,6 +50,12 @@ th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
 td.num,th.num{text-align:right}
 td.nw{white-space:nowrap}
 td.txt{min-width:22ch;max-width:48ch}
+button.more{background:none;border:0;padding:0;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline;white-space:nowrap}
+tr.detail td{background:var(--bg);padding:10px 12px}
+tr.detail dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 14px;margin:0;font-size:13px}
+tr.detail dt{color:var(--muted);white-space:nowrap}
+tr.detail dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:640px){tr.detail dl{grid-template-columns:1fr}tr.detail dt{margin-top:6px}}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);white-space:nowrap}
 .pill.new,.st.new{border-color:var(--bad);color:var(--bad)}
 .pill.in-progress,.st.in-progress{border-color:var(--accent);color:var(--accent)}
@@ -428,7 +434,9 @@ function start(DATA) {
       td(tr, r['Reported at'], 'nw');
       td(tr, repName(String(r['Reported by'] || 'unknown').toLowerCase()), 'nw');
       td(tr, r['Issue type'] || '', 'nw');
-      td(tr, r['What was wrong'] || '', 'txt');
+      var wrong = td(tr, r['What was wrong'] || '', 'txt');
+      var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'more'; btn.textContent = 'Details';
+      btn.setAttribute('aria-expanded', 'false'); wrong.appendChild(document.createElement('br')); wrong.appendChild(btn);
       var cell = td(tr, '', 'nw');
       var sel = document.createElement('select'); sel.id = 'st-' + (r.row_number || i);
       sel.setAttribute('aria-label', 'Status of the ' + r['Reported at'] + ' report');
@@ -440,6 +448,18 @@ function start(DATA) {
       var fixedCell = td(tr, r['Fixed at'] || '', 'nw');
       sel.addEventListener('change', function () { save(r, sel, fixedCell); });
       tb.appendChild(tr);
+      // Full report, shown on "Details".
+      var dr = document.createElement('tr'); dr.className = 'detail'; dr.hidden = true;
+      var dc = document.createElement('td'); dc.colSpan = 6; var dl = document.createElement('dl');
+      ['What I asked', 'Location', 'What the agent did', 'What came back', 'What was wrong', 'Expected', 'Data time'].forEach(function (k) {
+        var dt = document.createElement('dt'); dt.textContent = k; var dd = document.createElement('dd'); dd.textContent = r[k] || '—';
+        dl.appendChild(dt); dl.appendChild(dd);
+      });
+      dc.appendChild(dl); dr.appendChild(dc); tb.appendChild(dr);
+      btn.addEventListener('click', function () {
+        dr.hidden = !dr.hidden; btn.textContent = dr.hidden ? 'Details' : 'Hide';
+        btn.setAttribute('aria-expanded', String(!dr.hidden));
+      });
     });
   })();
 
